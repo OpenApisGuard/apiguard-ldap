@@ -2,10 +2,19 @@ package org.apiguard.security.ldap.service;
 
 import org.apiguard.security.ldap.exceptions.ApiGuardLdapException;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.springframework.ldap.AuthenticationException;
+import org.springframework.ldap.core.support.LdapContextSource;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.ldap.authentication.BindAuthenticator;
 
 /*
  * Copyright 2017 the original author or authors.
@@ -22,33 +31,45 @@ import org.junit.rules.ExpectedException;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class LdapServiceTest {
 
-    private static LdapService service;
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(BindAuthenticator.class)
+public class LdapServiceTest {
 
     @Rule
     public ExpectedException expectedEx = ExpectedException.none();
 
-    @BeforeClass
-    public static void setup() {
-        service = new LdapService();
-    }
-
     @Test
     public void testLdap() throws Exception {
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenReturn(Mockito.anyObject());
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-only-admin,dc=example,dc=com", "password", "dc=example,dc=com", "uid", "tesla", "password");
+
         Assert.assertTrue(authenticate);
     }
 
-    @Test
+    @Test(expected = ApiGuardLdapException.class)
     public void testInvalidUrlLdap() throws Exception {
-        expectedEx.expect(ApiGuardLdapException.class);
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(Exception.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://localhost:111", "cn=read-xxx,dc=example,dc=com", "password", "dc=example,dc=com", "uid", "tesla", "password");
     }
 
     @Test
     public void testInvalidAdminDnLdap() throws Exception {
         expectedEx.expect(ApiGuardLdapException.class);
+        expectedEx.expectMessage("Invalid admin credentails");
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(AuthenticationException.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-xxx,dc=example,dc=com", "password", "dc=example,dc=com", "uid", "tesla", "password");
     }
 
@@ -56,12 +77,22 @@ public class LdapServiceTest {
     public void testInvalidAdminPasswordLdap() throws Exception {
         expectedEx.expect(ApiGuardLdapException.class);
         expectedEx.expectMessage("Invalid admin credentails");
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(AuthenticationException.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-only-admin,dc=example,dc=com", "xxx", "dc=example,dc=com", "uid", "tesla", "password");
     }
 
     @Test
     public void testInvalidUserBaseLdap() throws Exception {
         expectedEx.expect(ApiGuardLdapException.class);
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(Exception.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-only-admin,dc=example,dc=com", "password", "dc=example,dc=xxx", "uid", "tesla", "password");
     }
 
@@ -69,6 +100,11 @@ public class LdapServiceTest {
     public void testInvalidUserAttrLdap() throws Exception {
         expectedEx.expect(ApiGuardLdapException.class);
         expectedEx.expectMessage("Invalid user id");
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(UsernameNotFoundException.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-only-admin,dc=example,dc=com", "password", "dc=example,dc=com", "cn", "tesla", "password");
     }
 
@@ -76,6 +112,11 @@ public class LdapServiceTest {
     public void testInvalidUserNameLdap() throws Exception {
         expectedEx.expect(ApiGuardLdapException.class);
         expectedEx.expectMessage("Invalid user id");
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(UsernameNotFoundException.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-only-admin,dc=example,dc=com", "password", "dc=example,dc=com", "uid", "tesl", "password");
     }
 
@@ -83,6 +124,11 @@ public class LdapServiceTest {
     public void testInvalidPasswordLdap() throws Exception {
         expectedEx.expect(ApiGuardLdapException.class);
         expectedEx.expectMessage("Invalid user credentails");
+        BindAuthenticator authMock = Mockito.mock(BindAuthenticator.class);
+        Mockito.when(authMock.authenticate(Mockito.anyObject())).thenThrow(BadCredentialsException.class);
+        PowerMockito.whenNew(BindAuthenticator.class).withArguments(LdapContextSource.class).thenReturn(authMock);
+
+        LdapService service = new LdapService();
         boolean authenticate = service.authenticate("ldap://ldap.forumsys.com:389", "cn=read-only-admin,dc=example,dc=com", "password", "dc=example,dc=com", "uid", "tesla", "xxx");
     }
 }
